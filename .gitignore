@@ -1,3 +1,11 @@
+# Built files
+examples/*.js
+lib/*.js
+replicat*.js
+cors-proxy.js
+**/*.d.ts
+**/*.d.ts.map
+
 node_modules
 .idea
 wallaby.js
