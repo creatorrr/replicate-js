@@ -6,6 +6,7 @@
   "types": "replicate.d.ts",
   "type": "module",
   "dependencies": {
+    "@adobe/node-fetch-retry": "^2.2.0",
     "express": "^4.18.1",
     "http-proxy-middleware": "^2.0.6"
   },
@@ -40,6 +41,8 @@
     "extensions": {
       "ts": "module"
     },
-    "nodeArguments": ["--loader=ts-node/esm"]
+    "nodeArguments": [
+      "--loader=ts-node/esm"
+    ]
   }
 }

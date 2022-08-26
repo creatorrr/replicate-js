@@ -1,3 +1,5 @@
+import fetch from "@adobe/node-fetch-retry";
+
 import test from "ava";
 import Replicate from "./replicate.js";
 import { DefaultFetchHTTPClient } from "./replicate.js";
@@ -79,13 +81,15 @@ test("makes a prediction", async (t) => {
 });
 
 test("built-in http client gets & posts", async (t) => {
-  globalThis.fetch = (calledUrl, usedOptions) =>
+  const mockFetch: typeof fetch = (calledUrl, usedOptions) =>
     Promise.resolve({ json: () => [calledUrl, usedOptions] }) as any;
-  const httpClient = new DefaultFetchHTTPClient("abctoken");
+
+  const httpClient = new DefaultFetchHTTPClient("abctoken", mockFetch);
 
   var [calledUrl, usedOptions] = await httpClient.get({
     url: "https://api.replicate.com/v1/versions",
   });
+
   t.is(calledUrl, "https://api.replicate.com/v1/versions");
   t.is(usedOptions.headers.Authorization, "Token abctoken");
 

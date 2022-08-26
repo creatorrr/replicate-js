@@ -1,3 +1,5 @@
+import fetch, { RetryOptions } from "@adobe/node-fetch-retry";
+
 const BASE_URL: string = "https://api.replicate.com/v1";
 const DEFAULT_POLLING_INTERVAL: number = 5000;
 
@@ -61,37 +63,47 @@ export class Replicate {
     };
   }
 
-  async callHttpClient({ url, method, event, body }: CustomRequest) {
+  async callHttpClient(
+    { url, method, event, body }: CustomRequest,
+    retryOptions: RetryOptions = {}
+  ) {
     url = `${this.baseUrl}${url}`;
-    return await this.httpClient[method]({
-      url,
-      event,
-      body,
-      token: this.token,
-    });
+    return await this.httpClient[method](
+      {
+        url,
+        event,
+        body,
+        token: this.token,
+      },
+      retryOptions
+    );
   }
 
-  async getModel(path: string) {
+  async getModel(path: string, retryOptions: RetryOptions = {}) {
     const request: CustomRequest = {
       url: `/models/${path}/versions`,
       method: "get",
       event: "getModelDetails",
     };
-    return await this.callHttpClient(request);
+    return await this.callHttpClient(request, retryOptions);
   }
 
-  async getPrediction(id: string): Promise<any> {
+  async getPrediction(
+    id: string,
+    retryOptions: RetryOptions = {}
+  ): Promise<any> {
     const request: CustomRequest = {
       url: `/predictions/${id}`,
       method: "get",
       event: "getPrediction",
     };
-    return await this.callHttpClient(request);
+    return await this.callHttpClient(request, retryOptions);
   }
 
   async startPrediction(
     modelVersion: string,
-    input: string | Record<string, any> | any[]
+    input: string | Record<string, any> | any[],
+    retryOptions: RetryOptions = {}
   ) {
     const body = { version: modelVersion, input: input };
     const request: CustomRequest = {
@@ -100,7 +112,7 @@ export class Replicate {
       event: "startPrediction",
       body,
     };
-    return await this.callHttpClient(request);
+    return await this.callHttpClient(request, retryOptions);
   }
 }
 
@@ -184,35 +196,40 @@ export class Model {
 // This class just makes it a bit easier to call fetch -- interface similar to the axios library
 export class DefaultFetchHTTPClient {
   public headers: Record<string, string>;
+  public _fetch: typeof fetch;
 
-  constructor(token: string) {
+  constructor(token: string, _fetch = fetch) {
     this.headers = {
       Authorization: `Token ${token}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     };
+
+    this._fetch = _fetch;
   }
 
-  // This class uses fetch, which is still experimental in Node 18, so we import a polyfill for Node if fetch is not defined
-  async importFetch() {
-    if (isNode && !globalThis.fetch)
-      globalThis.fetch = (await import("node-fetch"))["default"] as any;
-  }
-
-  async get({ url }: CustomRequest): Promise<any> {
-    await this.importFetch();
-    const response = await fetch(url, { headers: this.headers });
+  async get(
+    { url }: CustomRequest,
+    retryOptions: RetryOptions = {}
+  ): Promise<any> {
+    const response = await this._fetch(url, {
+      retryOptions,
+      headers: this.headers,
+    });
     return await response.json();
   }
 
-  async post({ url, body }: CustomRequest): Promise<any> {
-    await this.importFetch();
+  async post(
+    { url, body }: CustomRequest,
+    retryOptions: RetryOptions = {}
+  ): Promise<any> {
     const fetchOptions = {
+      retryOptions,
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
     };
-    const response = await fetch(url, fetchOptions);
+    const response = await this._fetch(url, fetchOptions);
     return await response.json();
   }
 }
